@@ -1,6 +1,6 @@
 plugins {
     id 'application'
-    id'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
 }
 
 mainClassName = 'com.yildizan.bot.kandilli.Core'
@@ -17,6 +17,8 @@ repositories {
 dependencies {
     compile 'net.dv8tion:JDA:4.1.1_104'
     compile 'org.jsoup:jsoup:1.12.1'
+    compileOnly 'org.projectlombok:lombok:1.18.10'
+    annotationProcessor 'org.projectlombok:lombok:1.18.10'
 }
 
 shadowJar {
