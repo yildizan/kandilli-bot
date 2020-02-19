@@ -33,6 +33,7 @@ public class Core extends ListenerAdapter {
             .addEventListeners(new Core())
             .setActivity(Activity.listening("type !deprem help"))
             .build();
+        System.out.println(Constants.SELFNAME + " is online!");
     }
 
     @Override
@@ -167,7 +168,7 @@ public class Core extends ListenerAdapter {
 
     private void clear(TextChannel channel) {
         OffsetDateTime twoWeeksAgo = OffsetDateTime.now().minus(2, ChronoUnit.WEEKS);
-        List<Message> messages = new ArrayList<>();
+        final List<Message> messages = new ArrayList<>();
         for(Message m : channel.getIterableHistory()) {
             if(m.getTimeCreated().isBefore(twoWeeksAgo)) {
                 break;
@@ -179,7 +180,13 @@ public class Core extends ListenerAdapter {
         }
         // jda api restriction: deleting count should be between 2 and 100
         if(messages.size() > 1) {
-            channel.deleteMessages(messages.stream().limit(Math.min(messages.size(), 100)).collect(Collectors.toList())).queue();
+            channel.deleteMessages(messages.stream().limit(Math.min(messages.size(), 100)).collect(Collectors.toList()))
+                    .delay(1, TimeUnit.SECONDS)
+                    .flatMap(report -> channel.sendMessage(":wastebasket: bugün de temizlendik çok şükür. (" + Math.min(messages.size(), 100) + " mesaj)"))
+                    .delay(3, TimeUnit.SECONDS)
+                    .flatMap(Message::delete)
+                    .queue();
+
         }
     }
 
