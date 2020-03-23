@@ -22,7 +22,7 @@ public class Server {
 
     public static Earthquake last() {
         try {
-            return extract(fetch()).getKey();
+            return extract(fetch()).getEarthquake();
         }
         catch (Exception e) {
             return null;
@@ -33,9 +33,9 @@ public class Server {
         List<Earthquake> earthquakes = new ArrayList<>();
         String text = fetch();
         for(int i = 0; i < count; i++) {
-            Pair<Earthquake, String> pair = extract(text);
-            earthquakes.add(pair.getKey());
-            text = pair.getValue();
+            Extract extract = extract(text);
+            earthquakes.add(extract.getEarthquake());
+            text = extract.getRemaining();
         }
         return earthquakes;
     }
@@ -43,14 +43,15 @@ public class Server {
     public static Earthquake lastGreater(double threshold) {
         String text = fetch();
         while(text.length() > 0) {
-            Pair<Earthquake, String> pair = extract(text);
-            if(pair.getKey() == null) {
+            Extract extract = extract(text);
+            Earthquake earthquake = extract.getEarthquake();
+            if(earthquake == null) {
                 break;
             }
-            else if(pair.getKey().getMagnitude() >= threshold) {
-                return pair.getKey();
+            else if(earthquake.getMagnitude() >= threshold) {
+                return earthquake;
             }
-            text = pair.getValue();
+            text = extract.getRemaining();
         }
         return null;
     }
@@ -59,14 +60,15 @@ public class Server {
         List<Earthquake> earthquakes = new ArrayList<>();
         String text = fetch();
         while(text.length() > 0 && earthquakes.size() < count) {
-            Pair<Earthquake, String> pair = extract(text);
-            if(pair.getKey() == null) {
+            Extract extract = extract(text);
+            Earthquake earthquake = extract.getEarthquake();
+            if(earthquake == null) {
                 break;
             }
-            else if(pair.getKey().getMagnitude() >= threshold) {
-                earthquakes.add(pair.getKey());
+            else if(earthquake.getMagnitude() >= threshold) {
+                earthquakes.add(earthquake);
             }
-            text = pair.getValue();
+            text = extract.getRemaining();
         }
         return earthquakes;
     }
@@ -75,8 +77,8 @@ public class Server {
         List<Earthquake> earthquakes = new ArrayList<>();
         String text = fetch();
         while(text.length() > 0) {
-            Pair<Earthquake, String> pair = extract(text);
-            Earthquake earthquake = pair.getKey();
+            Extract extract = extract(text);
+            Earthquake earthquake = extract.getEarthquake();
             long now = System.currentTimeMillis();
             long duration = TimeUnit.MILLISECONDS.convert(minutes, TimeUnit.MINUTES);
             if(now - earthquake.getDate().getTime() < duration) {
@@ -85,7 +87,7 @@ public class Server {
             else {
                 break;
             }
-            text = pair.getValue();
+            text = extract.getRemaining();
         }
         return earthquakes;
     }
@@ -109,7 +111,7 @@ public class Server {
         }
     }
 
-    private static Pair<Earthquake, String> extract(String text) {
+    private static Extract extract(String text) {
         String remaining = "";
         try {
             int index = text.indexOf("\n");
@@ -131,13 +133,13 @@ public class Server {
             }
             earthquake.setLocation(location.toString());
 
-            return new Pair<>(earthquake, remaining);
+            return new Extract(earthquake, remaining);
         }
         catch (ParseException e) {
-            return new Pair<>(null, remaining);
+            return new Extract(null, remaining);
         }
         catch (Exception e) {
-            return new Pair<>(null, "");
+            return new Extract(null, "");
         }
     }
 

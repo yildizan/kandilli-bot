@@ -15,11 +15,14 @@ public class Earthquake {
     private double magnitude;
     private String location;
 
-    @Override
     public String toString() {
-        return "```⏰: " + new SimpleDateFormat("HH:mm:ss").format(date) + '\n' +
+        return toString(false);
+    }
+
+    public String toString(boolean inline) {
+        return (inline ? "" : "```") + "⏰: " + new SimpleDateFormat("HH:mm:ss").format(date) + '\n' +
                 "\uD83D\uDCC5: " + new SimpleDateFormat("dd.MM.yyyy").format(date) + '\n' +
                 "\uD83D\uDCC8: " + magnitude + '\n' +
-                "\uD83D\uDCCD: " + location + "```";
+                "\uD83D\uDCCD: " + location + (inline ? "" : "```");
     }
 }
