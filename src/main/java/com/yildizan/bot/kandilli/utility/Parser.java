@@ -2,7 +2,7 @@ package com.yildizan.bot.kandilli.utility;
 
 import java.util.List;
 
-public class Parser {
+public final class Parser {
 
     private Parser() {}
 

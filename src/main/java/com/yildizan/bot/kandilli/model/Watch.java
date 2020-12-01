@@ -8,7 +8,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class Watch implements Serializable {
 
-    @Getter private long channelId;
-    @Getter private double magnitude;
+    @Getter private final long channelId;
+    @Getter private final double magnitude;
 
 }

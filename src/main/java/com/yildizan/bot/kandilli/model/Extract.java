@@ -1,4 +1,4 @@
-package com.yildizan.bot.kandilli.service;
+package com.yildizan.bot.kandilli.model;
 
 import com.yildizan.bot.kandilli.model.Earthquake;
 import lombok.AllArgsConstructor;

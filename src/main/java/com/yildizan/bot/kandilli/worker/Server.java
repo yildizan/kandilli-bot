@@ -1,7 +1,8 @@
-package com.yildizan.bot.kandilli.service;
+package com.yildizan.bot.kandilli.worker;
 
 import com.yildizan.bot.kandilli.model.Earthquake;
-import javafx.util.Pair;
+import com.yildizan.bot.kandilli.model.Extract;
+import com.yildizan.bot.kandilli.utility.Constants;
 import org.jsoup.Jsoup;
 
 import java.text.ParseException;
@@ -12,15 +13,16 @@ import java.util.concurrent.TimeUnit;
 
 public class Server {
 
-    private static final String url = "http://www.koeri.boun.edu.tr/scripts/lst0.asp";
-
     // archive html to reduce request count
-    private static String html = "";
-    private static long timestamp = System.currentTimeMillis();
+    private String html;
+    private long timestamp;
 
-    private Server() {}
+    public Server() {
+        html = "";
+        timestamp = System.currentTimeMillis();
+    }
 
-    public static Earthquake last() {
+    public Earthquake last() {
         try {
             return extract(fetch()).getEarthquake();
         }
@@ -29,7 +31,7 @@ public class Server {
         }
     }
 
-    public static List<Earthquake> last(int count) {
+    public List<Earthquake> last(int count) {
         List<Earthquake> earthquakes = new ArrayList<>();
         String text = fetch();
         for(int i = 0; i < count; i++) {
@@ -40,23 +42,7 @@ public class Server {
         return earthquakes;
     }
 
-    public static Earthquake lastGreater(double threshold) {
-        String text = fetch();
-        while(text.length() > 0) {
-            Extract extract = extract(text);
-            Earthquake earthquake = extract.getEarthquake();
-            if(earthquake == null) {
-                break;
-            }
-            else if(earthquake.getMagnitude() >= threshold) {
-                return earthquake;
-            }
-            text = extract.getRemaining();
-        }
-        return null;
-    }
-
-    public static List<Earthquake> lastGreater(double threshold, int count) {
+    public List<Earthquake> lastGreater(double threshold, int count) {
         List<Earthquake> earthquakes = new ArrayList<>();
         String text = fetch();
         while(text.length() > 0 && earthquakes.size() < count) {
@@ -73,7 +59,7 @@ public class Server {
         return earthquakes;
     }
 
-    public static List<Earthquake> lastIn(int minutes) {
+    public List<Earthquake> lastIn(int minutes) {
         List<Earthquake> earthquakes = new ArrayList<>();
         String text = fetch();
         while(text.length() > 0) {
@@ -92,15 +78,14 @@ public class Server {
         return earthquakes;
     }
 
-    private static String fetch() {
+    private String fetch() {
         try {
             // check if archive older than 1 minute
             if(System.currentTimeMillis() - timestamp  > 60000 || html.isEmpty()) {
-                html = Jsoup
-                    .connect(url)
-                    .get()
-                    .selectFirst("pre")
-                    .html();
+                html = Jsoup.connect(Constants.URL)
+                        .get()
+                        .selectFirst("pre")
+                        .html();
                 timestamp = System.currentTimeMillis();
             }
             int beginning = findBeginning(html);
@@ -111,7 +96,7 @@ public class Server {
         }
     }
 
-    private static Extract extract(String text) {
+    private Extract extract(String text) {
         String remaining = "";
         try {
             int index = text.indexOf("\n");
@@ -143,7 +128,7 @@ public class Server {
         }
     }
 
-    private static int findBeginning(String text) {
+    private int findBeginning(String text) {
         int index = 0;
         for(int i = 0; i < 6; i++) {
             index = text.indexOf("\n", index + 1);

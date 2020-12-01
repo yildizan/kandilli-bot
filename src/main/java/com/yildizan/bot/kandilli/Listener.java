@@ -1,14 +1,14 @@
 package com.yildizan.bot.kandilli;
 
 import com.yildizan.bot.kandilli.model.Earthquake;
-import com.yildizan.bot.kandilli.model.Watch;
-import com.yildizan.bot.kandilli.service.Server;
+import com.yildizan.bot.kandilli.worker.Server;
 import com.yildizan.bot.kandilli.utility.Constants;
 import com.yildizan.bot.kandilli.utility.Parser;
 import com.yildizan.bot.kandilli.utility.Validator;
-import net.dv8tion.jda.api.JDA;
+import com.yildizan.bot.kandilli.worker.Watcher;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.ChannelType;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.ReadyEvent;
@@ -24,29 +24,28 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class Core extends ListenerAdapter {
+public class Listener extends ListenerAdapter {
 
-    private ScheduledFuture<?> future;
-    private final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
-    private final List<Watch> watches = new ArrayList<>();
+    private final Server server = new Server();
+    private final Watcher watcher = new Watcher();
 
     public static void main(String[] args) throws Exception {
-        new JDABuilder(Constants.TOKEN)
-            .addEventListeners(new Core())
-            .setActivity(Activity.listening("type !deprem help"))
+        JDABuilder.createDefault(Constants.TOKEN)
+            .addEventListeners(new Listener())
+            .setActivity(Activity.listening("the underground"))
             .build();
     }
 
     @Override
     public void onReady(@Nonnull ReadyEvent event) {
         super.onReady(event);
-        System.out.println(Constants.SELFNAME + " is online!");
+        System.out.println(Constants.SELFNAME + " is online for " + event.getGuildTotalCount() + " servers!");
     }
 
     @Override
     public void onMessageReceived(@Nonnull MessageReceivedEvent event) {
         super.onMessageReceived(event);
-        if(event.getAuthor().isBot() || !Validator.validateCommand(event.getMessage().getContentRaw())) {
+        if(event.getAuthor().isBot() || !event.isFromType(ChannelType.TEXT) || !Validator.validateCommand(event.getMessage().getContentRaw())) {
             return;
         }
         Message message = event.getMessage();
@@ -60,11 +59,10 @@ public class Core extends ListenerAdapter {
         }
 
         if(tokens.size() == 1) {
-            send(channel, Server.last());
+            send(channel, server.last());
         }
         else if(tokens.size() == 2) {
             switch (tokens.get(1)) {
-                // guide
                 case "help":
                     showHelp(channel);
                     break;
@@ -72,17 +70,16 @@ public class Core extends ListenerAdapter {
                     clear(channel);
                     break;
                 case "dürtme":
-                    stopWatching(channel);
+                    watcher.stop(channel);
                     break;
                 case "son":
-                    send(channel, Server.last());
+                    send(channel, server.last());
                     break;
                 default:
                     send(channel, ":face_with_monocle: komutu yanlış/eksik girmiş olabilir misin?");
                     break;
             }
         }
-        // tokens > 2
         else {
             // parse count
             int count = Parser.extractCount(tokens);
@@ -93,94 +90,54 @@ public class Core extends ListenerAdapter {
             // parse magnitude
             double magnitude = Parser.extractMagnitude(tokens);
 
-            List<Earthquake> earthquakes;
+            List<Earthquake> earthquakes = null;
 
             // valid magnitude
             if(magnitude > 0.0d) {
-                startWatching(channel, magnitude);
-                return;
+                watcher.start(channel, magnitude);
             }
             // valid count && valid threshold
             else if(count > 0 && threshold > 0.0d) {
-                earthquakes = Server.lastGreater(threshold, count);
+                earthquakes = server.lastGreater(threshold, count);
             }
             // valid count && invalid threshold
             else if(count > 0) {
-                earthquakes = Server.last(count);
+                earthquakes = server.last(count);
             }
             // invalid count && valid threshold
             else if(threshold > 0.0d) {
-                earthquakes = new ArrayList<>();
-                earthquakes.add(Server.lastGreater(threshold));
+                earthquakes = server.lastGreater(threshold, 1);
             }
             // invalid count && invalid threshold
             else {
                 send(channel, ":pensive: geçersiz parametre girdin, niye öyle oldu?");
-                return;
             }
 
-            send(channel, earthquakes);
-        }
-    }
-
-    private void watch(JDA jda) {
-        List<Earthquake> earthquakes = Server.lastIn(Constants.WATCH_PERIOD);
-        for(Watch watch : watches) {
-            TextChannel channel = jda.getTextChannelById(watch.getChannelId());
-            if(channel == null) {
-                watches.remove(watch);
-                continue;
-            }
-            List<Earthquake> channelEarthquakes = earthquakes.stream().filter(e -> e.getMagnitude() >= watch.getMagnitude()).collect(Collectors.toList());
-            if(!channelEarthquakes.isEmpty()) {
-                send(channel, channelEarthquakes);
+            if(earthquakes != null) {
+                send(channel, earthquakes);
             }
         }
     }
 
-    private void startWatching(TextChannel channel, double magnitude) {
-        if(!isWatching(channel)) {
-            if(watches.isEmpty()) {
-                future = executor.scheduleAtFixedRate(() -> watch(channel.getJDA()), 0, Constants.WATCH_PERIOD, TimeUnit.MINUTES);
-            }
-            watches.add(new Watch(channel.getIdLong(), magnitude));
-        }
-        send(channel, ":detective: izlemedeyim.");
-    }
-
-    private void stopWatching(TextChannel channel) {
-        if(isWatching(channel)) {
-            watches.removeIf(c -> c.getChannelId() == channel.getIdLong());
-            if(watches.isEmpty()) {
-                future.cancel(true);
-            }
-        }
-        send(channel, ":hand_splayed: saldım.");
-    }
-
-    private void send(TextChannel channel, Earthquake earthquake) {
+    public static void send(TextChannel channel, Earthquake earthquake) {
         send(channel, earthquake == null ? ":fireworks: deprem kaydı yok." : earthquake.toString());
     }
 
-    private void send(TextChannel channel, List<Earthquake> earthquakes) {
+    public static void send(TextChannel channel, List<Earthquake> earthquakes) {
         if(earthquakes.isEmpty()) {
             send(channel, ":fireworks: deprem kaydı yok.");
         }
         else {
             StringBuilder message = new StringBuilder("```");
-            for(int i = 0; i < earthquakes.size(); i++) {
-                message.append(earthquakes.get(i).toString(true)).append(i < earthquakes.size() - 1 ? "\n\n" : "```");
+            for(Earthquake earthquake : earthquakes) {
+                message.append(earthquake.toString(true)).append("\n\n");
             }
-            send(channel, message.toString());
+            send(channel, message.append("```").toString());
         }
     }
 
-    private void send(TextChannel channel, String message) {
+    public static void send(TextChannel channel, String message) {
         channel.sendMessage(message).queue();
-    }
-
-    private boolean isWatching(TextChannel channel) {
-        return watches.stream().anyMatch(w -> w.getChannelId() == channel.getIdLong());
     }
 
     private void showHelp(TextChannel channel) {
