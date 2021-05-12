@@ -1,6 +1,5 @@
 package com.yildizan.bot.kandilli.worker;
 
-import com.yildizan.bot.kandilli.Listener;
 import com.yildizan.bot.kandilli.model.Earthquake;
 import com.yildizan.bot.kandilli.model.Watch;
 import com.yildizan.bot.kandilli.utility.Constants;

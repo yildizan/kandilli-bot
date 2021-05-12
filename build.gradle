@@ -3,7 +3,7 @@ plugins {
     id 'java'
 }
 
-mainClassName = 'com.yildizan.bot.kandilli.Listener'
+mainClassName = 'com.yildizan.bot.kandilli.worker.Listener'
 compileJava.options.encoding = 'UTF-8'
 group 'com.yildizan.bot'
 version '1.0'

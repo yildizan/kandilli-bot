@@ -1,11 +1,9 @@
-package com.yildizan.bot.kandilli;
+package com.yildizan.bot.kandilli.worker;
 
 import com.yildizan.bot.kandilli.model.Earthquake;
-import com.yildizan.bot.kandilli.worker.Server;
 import com.yildizan.bot.kandilli.utility.Constants;
 import com.yildizan.bot.kandilli.utility.Parser;
 import com.yildizan.bot.kandilli.utility.Validator;
-import com.yildizan.bot.kandilli.worker.Watcher;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.ChannelType;
